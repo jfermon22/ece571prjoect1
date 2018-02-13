@@ -1,53 +1,80 @@
-# Affine Cipher Hacker
+import operator
+from FrequencyAnalyzer import FrequencyAnalyzer
+from fractions import gcd
 
-import pyperclip, affineCipher, detectEnglish, cryptomath
+class SubstitutionHacker:
+    letterMapping = {'A': 'A', 'B': 'B', 'C': 'C', 'D': 'D', 'E': 'E', 'F': 'F', 'G': 'G', 'H': 'H', 'I': 'I', 'J':'J', 'K': 'K', 'L': 'L', 'M': 'M', 
+                        'N': 'N', 'O': 'O', 'P': 'P', 'Q': 'Q', 'R': 'R', 'S': 'S', 'T': 'T', 'U': 'U', 'V': 'V', 'W': 'W', 'X': 'X', 'Y': 'Y', 'Z': 'Z'}
+    LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+    
+    def __init__(self, rawText):
+        self.rawText = rawText
+        freqAnalyzer = FrequencyAnalyzer(rawText)
+        print freqAnalyzer.letterFrequency
+        
+    def shiftText(self, text, keyA, keyB):
+       textList = []
+       for iii in range(0,len(text)):
+           textList.append( self.LETTERS[ (keyA * self.LETTERS.find(text[iii]) + keyB) % len(self.LETTERS) ])
+       return "".join(textList)
+           
+    def bruteCrack(self):
+       textSlice = self.rawText[:20]
+       for keyA in range(len(self.LETTERS)):
+           for keyB in range(len(self.LETTERS)):
+               if gcd(keyA, len(self.LETTERS)) != 1:
+                  continue
+             
+               print str(keyA)+ ","+ str(keyB)  + ": " + self.shiftText(textSlice,keyA,keyB)
+           
+       num = 0
+       while num == 0:
+          num = int(input("Enter number of decrypted text, else 26: "))
+          if num < 1 or num > len(self.LETTERS)**2:
+             print "Please enter valid number from 1-26"
+             num = 0
+             continue
+             
+          if num < len(self.LETTERS)**2 : 
+               print self.shiftText(self.rawText,num)
+               ans = raw_input("Is the cypher cracked? yn:")
+               if ans == "y":
+                  print "Hooray!"
+               else:
+                  print "Let's try again"
+                  num = 0
+          else:
+               print("Sorry, This may not be a affine cyper")
+               
+    def analysisCrack(self):
+          freqList = []
+          for iii in range(len(self.LETTERS)**2):
+              keyA = iii
+              keyB = iii % len(self.LETTERS)
+              shiftedText = self.shiftText(self.rawText,keyA,keyB)
+                
+              if gcd(keyA, len(self.LETTERS)) != 1:
+                 continue
+              
+              freqAnalyzer = FrequencyAnalyzer(shiftedText)
+              if freqAnalyzer.englishLetterMatch > 70 and freqAnalyzer.englishBigramMatch > 70:
+                 freqList.append(tuple((keyA,freqAnalyzer.rawFreqMatchOrderToEngish)))
+              
+          if not freqList:
+             print "Frequency analysis did not find strong correlation between cypher and English. This is likely not a Affine cypher"
+             return False
+          
+          freqList = sorted(freqList, key=operator.itemgetter(1),reverse=True)
+          
+          print freqList
 
-SILENT_MODE = False
-
-def main():
-
-    myMessage = """U&'<3dJ^Gjx'-3^MS'Sj0jxuj'G3'%j'<mMMjS'g{GjMMg9j{G'g"'gG '<3^MS'Sj<jguj'm'P^dm{'g{G3'%jMgjug{9'GPmG'gG'-m0'P^dm{LU'5&Mm{'_^xg{9"""
-
-    hackedMessage = hackAffine(myMessage)
-
-    if hackedMessage != None:
-        # The plaintext is displayed on the screen. For the convenience of the user, copy the text of the code to the clipboard
-        print('Copying hacked message to clipboard:')
-        print(hackedMessage)
-        pyperclip.copy(hackedMessage)
-    else:
-        print('Failed to hack encryption.')
-
-def hackAffine(message):
-    print('Hacking...')
-
-    # Python programs can be stopped at any time by pressing Ctrl-D (on Mac and Linux)
-    print('(Press Ctrl-C or Ctrl-D to quit at any time.)')
-
-    # brute-force by looping through every possible key
-    for key in range(len(affineCipher.SYMBOLS) ** 2):
-        keyA = affineCipher.getKeyParts(key)[0]
-        if cryptomath.gcd(keyA, len(affineCipher.SYMBOLS)) != 1:
-            continue
-
-        decryptedText = affineCipher.decryptMessage(key, message)
-        if not SILENT_MODE:
-            print('Tried Key %s.... (%s)' % (key, decryptedText[:40]))
-
-        if detectEnglish.isEnglish(decryptedText):
-            # Check with the user if the decrypted key has been found.
-            print()
-            print('Possible encryption hack:')
-            print('Key: %s' % (key))
-            print('Decrypted message: ' + decryptedText[:200])
-            print()
-            print('Enter D for done, or just press Enter to continue hacking:')
-            response = input('> ')
-
-            if response.strip().upper().startswith('D'):
-                return decryptedText
-    return None
-
-# If affineHacker.py is run (instead of imported as a module) call the main() function
-if __name__ == '__main__':
-    main()
+          key0,value0 = freqList[0]
+          key1,value1 = freqList[1]
+          print "Printing best guess:" + str( ( value0 + (100-abs(value0 - value1) /value0 ))/2.0) + "% certainty"
+          keyA = key0
+          keyB = key0 % len(self.LETTERS)
+          print self.shiftText(self.rawText,keyA, keyB)
+          print  "Key A: " + str(keyA) + " Key B: " + str(keyB)
+          
+          
+ 
