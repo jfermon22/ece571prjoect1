@@ -108,11 +108,11 @@ class FrequencyAnalyzer:
         self.rawFreqMatchOrderToEngish = 0;
         for iii in range(1,len(self.letterFrequency[:6])):
             key,value = self.letterFrequency[iii]
-            if iii == self.ETAOIN.find(key):
+            if key in self.ETAOIN[:6]:
                 self.rawFreqMatchOrderToEngish +=1
         for iii in range(len(self.letterFrequency)-6,len(self.letterFrequency)):
             key,value = self.letterFrequency[iii]
-            if iii == self.ETAOIN.find(key):
+            if key in self.ETAOIN[-6:]:
                 self.rawFreqMatchOrderToEngish +=1
                 
         self.rawFreqMatchOrderToEngish = self.rawFreqMatchOrderToEngish/12.0 *100.0;
