@@ -1,5 +1,6 @@
 import itertools, re
 from FrequencyAnalyzer import FrequencyAnalyzer
+from HackerReturnValue import HackerReturnValue
 import operator
 
 LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
@@ -42,7 +43,6 @@ class VigenereHacker:
     def getUsefulFactors(self, num):
         # Returns a list of useful factors of num. By "useful" we mean factors
         # less than MAX_KEY_LENGTH + 1. For example, getUsefulFactors(144)
-        # returns [2, 72, 3, 48, 4, 36, 6, 24, 8, 18, 9, 16, 12]
     
         if num < 2:
             return []  # numbers less than 2 have no useful factors
@@ -157,13 +157,13 @@ class VigenereHacker:
             i += keyLength
         return ''.join(letters)
     
-    def attemptBruteHackWithKeyLength(self, mostLikelyKeyLength):
+    def attemptBruteHackWithKeyLength(self, keyLength):
 
-        # allFreqScores is a list of mostLikelyKeyLength number of lists.
+        # allFreqScores is a list of keyLength number of lists.
         # These inner lists are the freqScores lists.
         allFreqScores = []
-        for nth in range(1, mostLikelyKeyLength + 1):
-            nthLetters = self.getNthSubkeysLetters(nth, mostLikelyKeyLength, self.rawText)
+        for nth in range(1, keyLength + 1):
+            nthLetters = self.getNthSubkeysLetters(nth, keyLength, self.rawText)
     
             # freqScores is a list of tuples like:
             # [(<letter>, <Eng. Freq. match score>), ... ]
@@ -198,10 +198,10 @@ class VigenereHacker:
         
         # Try every combination of the most likely letters for each position
         # in the key.
-        for indexes in itertools.product(range(NUM_MOST_FREQ_LETTERS), repeat=mostLikelyKeyLength):
+        for indexes in itertools.product(range(NUM_MOST_FREQ_LETTERS), repeat=keyLength):
             # Create a possible key from the letters in allFreqScores
             possibleKey = ''
-            for i in range(mostLikelyKeyLength):
+            for i in range(keyLength):
                 possibleKey += allFreqScores[i][indexes[i]][0]
      
             if not SILENT_MODE:
@@ -215,21 +215,21 @@ class VigenereHacker:
                 print 'Possible key found:' + (mostLikelyKey)
                 print "Decryption sample: " + decryptedText[:150]
             
-                print('Enter Q to quit if decryption sample is correct, or Enter to continue:')
-                response = raw_input('> ').upper()
-                if response == 'Q':
-                    return decryptedText
+            print 'press enter to quit if decryption sample is correct, or C to continue:' 
+            response = raw_input('> ').upper()
+            if response != 'C':
+                return decryptedText
     
         # No English-looking decryption found, so return None.
         return None
     
-    def attemptBestGuessHackWithKeyLength(self, mostLikelyKeyLength):
+    def attemptBestGuessHackWithKeyLength(self, keyLength):
 
-        # allFreqScores is a list of mostLikelyKeyLength number of lists.
+        # allFreqScores is a list of keyLength number of lists.
         # These inner lists are the freqScores lists.
         allFreqScores = []
-        for nth in range(1, mostLikelyKeyLength + 1):
-            nthLetters = self.getNthSubkeysLetters(nth, mostLikelyKeyLength, self.rawText)
+        for nth in range(1, keyLength + 1):
+            nthLetters = self.getNthSubkeysLetters(nth, keyLength, self.rawText)
     
             # freqScores is a list of tuples like:
             # [(<letter>, <Eng. Freq. match score>), ... ]
@@ -252,7 +252,7 @@ class VigenereHacker:
         for i in range(len(allFreqScores)):
             mostLikelyKey += ((allFreqScores[i])[0])[0]
             
-        print "Most likely key for size " + str(mostLikelyKeyLength) + ": " + mostLikelyKey
+        print "Most likely key for size " + str(keyLength) + ": " + mostLikelyKey
         # Try most likey key for this size
             
         decryptedText = self.decrypt(mostLikelyKey, self.rawText)
@@ -267,17 +267,49 @@ class VigenereHacker:
             print 'Possible key found:' + (mostLikelyKey)
             print "Decryption sample: " + decryptedText[:150]
             
-            print('Enter Q to quit if decryption sample is correct, or Enter to continue:')
+            print('press enter to quit if decryption sample is correct, or C to continue:')
             response = raw_input('> ').upper()
-            if response == 'Q':
+            if response != 'C':
                 return decryptedText
     
         # we failed
         return None
     
+    def getMostLikelyHack(self,keyLength):
+        # allFreqScores is a list of keyLength number of lists.
+        # These inner lists are the freqScores lists.
+        allFreqScores = []
+        for nth in range(1, keyLength + 1):
+            nthLetters = self.getNthSubkeysLetters(nth, keyLength, self.rawText)
+            freqScores = []
+            for possibleKey in LETTERS:
+                decryptedText = self.decrypt(possibleKey, nthLetters)
+                freqAnalyzer = FrequencyAnalyzer(decryptedText)
+                
+                keyAndFreqMatchTuple = (possibleKey, freqAnalyzer.rawFreqMatchOrderToEngish)
+                freqScores.append(keyAndFreqMatchTuple)
+            # Sort by match score
+            freqScores.sort(key=self.getItemAtIndexOne, reverse=True)
+    
+            allFreqScores.append(freqScores[:NUM_MOST_FREQ_LETTERS])
+    
+        mostLikelyKey = ''
+        for i in range(len(allFreqScores)):
+            mostLikelyKey += ((allFreqScores[i])[0])[0]
+            
+        decryptedText = self.decrypt(mostLikelyKey, self.rawText)
+        freqAnalyzer = FrequencyAnalyzer(decryptedText)
+        
+        avgScore = (freqAnalyzer.englishLetterMatch + freqAnalyzer.englishBigramMatch + freqAnalyzer.englishTrigramMatch + freqAnalyzer.rawFreqMatchOrderToEngish) / 4
+        if freqAnalyzer.englishLetterMatch > 90.0 and avgScore > 80.0:
+            percentConfidence = (freqAnalyzer.englishLetterMatch + avgScore) / 2.0
+            return HackerReturnValue(mostLikelyKey,decryptedText, percentConfidence)
+    
+        #failed
+        return None
+    
     def hack(self):
         # Find key length for kasiski test
-        self.rawText
         probableKeyLengths = self.kasiskiTest()
         #print('Kasiski Test results key lengths: ' + str(probableKeyLengths) + '\n')
     
@@ -314,11 +346,22 @@ class VigenereHacker:
                     
         return hackedMessage
     
-    def encrypt(self, key, text):
-        return self.translateMessage(key, message, 'encrypt')
+    def isVigenere(self):
+        probableKeyLengths = self.kasiskiTest()
+        
+        hackedMessage = self.getMostLikelyHack(probableKeyLengths[0])
+        
+        isVigenere = False
+        if hackedMessage != None and hackedMessage.percentConfidence > 80:
+            isVigenere = True
+                    
+        return isVigenere
     
-    def decrypt(self, key, message):
-        return self.translateMessage(key, message, 'decrypt')
+    def encrypt(self, key, text):
+        return self.translateMessage(key, text, 'encrypt')
+    
+    def decrypt(self, key, text):
+        return self.translateMessage(key, text, 'decrypt')
     
     def translateMessage(self, key, message, mode):
         translated = []  # stores the encrypted/decrypted message string
