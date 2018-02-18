@@ -4,9 +4,9 @@ from HackerReturnValue import HackerReturnValue
 import operator
 
 LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
-SILENT_MODE = False  # if set to True, program doesn't print attempts
-NUM_MOST_FREQ_LETTERS = 4  # attempts this many letters per subkey
-MAX_KEY_LENGTH = 16  # will not attempt keys longer than this
+SILENT_MODE = False
+NUM_MOST_FREQ_LETTERS = 4
+MAX_KEY_LENGTH = 15 
 NONLETTERS_PATTERN = re.compile('[^A-Z]')
 
 class VigenereHacker:
